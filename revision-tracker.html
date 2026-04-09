@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Revision">
+<meta name="theme-color" content="#f5f5f7">
+<title>Carter's GCSE Revision Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f5f5f7;--surface:#fff;--card:#fff;--accent:#007aff;--accent2:#5856d6;
+  --text:#1d1d1f;--text2:#86868b;--text3:#aeaeb2;
+  --green:#34c759;--amber:#ff9500;--red:#ff3b30;
+  --orange:#ff9500;--yellow:#ffcc00;--lightgreen:#34c759;
+  --border:#e5e5ea;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:70px;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.container{max-width:600px;margin:0 auto;padding:16px}
+
+/* Nav */
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.85);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;padding:6px 4px 8px;background:none;border:none;color:var(--text3);font-size:10px;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;transition:color .2s}
+nav button.active{color:var(--accent)}
+nav button svg{width:22px;height:22px}
+
+/* Header */
+.header{text-align:center;padding:20px 0 8px;position:relative}
+.header h1{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.header p{font-size:12px;color:var(--text2);margin-top:3px;font-weight:400}
+
+/* Tabs content */
+.tab{display:none}.tab.active{display:block}
+
+/* Exam countdown cards */
+.exam-card{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:10px;border-left:4px solid var(--accent);box-shadow:var(--shadow);position:relative;overflow:hidden}
+.exam-card .days{position:absolute;right:16px;top:50%;transform:translateY(-50%);text-align:center}
+.exam-card .days .num{font-size:30px;font-weight:800;line-height:1;color:var(--text)}
+.exam-card .days .label{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.exam-card h3{font-size:14px;font-weight:600;margin-bottom:4px;padding-right:80px;color:var(--text)}
+.exam-card .meta{font-size:11px;color:var(--text2)}
+.exam-card .meta span{margin-right:10px}
+.exam-card.urgent{border-left-color:var(--red)}.exam-card.urgent .days .num{color:var(--red)}
+.exam-card.soon{border-left-color:var(--amber)}.exam-card.soon .days .num{color:var(--amber)}
+.exam-card.planned{border-left-color:var(--green)}.exam-card.planned .days .num{color:var(--green)}
+
+/* Today's sessions */
+.today-box{background:linear-gradient(135deg,#007aff,#5856d6);border-radius:var(--radius);padding:16px;margin-bottom:16px;color:#fff}
+.today-box h2{font-size:14px;margin-bottom:10px;font-weight:600;color:#fff}
+.session-item{background:rgba(255,255,255,.18);border-radius:10px;padding:12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:background .2s}
+.session-item:active{background:rgba(255,255,255,.28)}
+.session-item .info{flex:1}
+.session-item .subj{font-size:12px;font-weight:600;color:#fff}
+.session-item .topic{font-size:11px;color:rgba(255,255,255,.75)}
+.session-item .slot{font-size:10px;color:rgba(255,255,255,.6);font-weight:600}
+.session-item.done-session{opacity:.45}
+.session-item.done-session .subj,.session-item.done-session .topic{text-decoration:line-through}
+
+/* Progress overview on dashboard */
+.progress-overview{margin-bottom:14px;background:var(--surface);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.progress-overview h2{font-size:14px;margin-bottom:8px}
+.prog-row{display:flex;align-items:center;margin-bottom:8px;font-size:12px}
+.prog-row:last-child{margin-bottom:0}
+.prog-row .plabel{width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;color:var(--text)}
+.prog-row .pbar{flex:1;height:6px;background:var(--bg);border-radius:3px;margin:0 10px;overflow:hidden}
+.prog-row .pfill{height:100%;border-radius:3px;transition:width .4s}
+.prog-row .ppct{width:36px;text-align:right;font-weight:600;font-size:11px}
+
+/* Timetable */
+.week-header{background:var(--surface);border-radius:var(--radius);padding:14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow);transition:background .15s}
+.week-header:active{background:#f0f0f5}
+.week-header h3{font-size:13px;font-weight:600;color:var(--text)}.week-header .arrow{transition:transform .3s;font-size:12px;color:var(--text2)}
+.week-header.open .arrow{transform:rotate(180deg)}
+.week-header.current-week{border:2px solid var(--accent)}
+.week-body{display:none;margin-bottom:12px}
+.week-body.open{display:block}
+.day-col{margin-bottom:10px}
+.day-col h4{font-size:11px;color:var(--accent);margin-bottom:4px;padding-left:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.tt-session{background:var(--surface);border-radius:10px;padding:10px 12px;margin-bottom:4px;display:flex;align-items:center;gap:10px;cursor:pointer;box-shadow:var(--shadow);transition:background .15s}
+.tt-session:active{background:#f0f0f5}
+.tt-session .check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;transition:.2s}
+.tt-session.completed .check{background:var(--green);border-color:var(--green);color:#fff}
+.tt-session .sinfo{flex:1}
+.tt-session .ssubj{font-size:12px;font-weight:600}
+.tt-session .stopic{font-size:11px;color:var(--text2)}
+.tt-session .sslot{font-size:10px;color:var(--text3);font-weight:500}
+
+/* Progress tracker */
+.subject-section{margin-bottom:10px}
+.subject-header{background:var(--surface);border-radius:var(--radius);padding:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow);transition:background .15s}
+.subject-header:active{background:#f0f0f5}
+.subject-header h3{font-size:14px;flex:1;font-weight:600}
+.subject-header .pct-badge{border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;margin-right:8px}
+.subject-header .arrow{transition:transform .3s;font-size:12px;color:var(--text2)}
+.subject-header.open .arrow{transform:rotate(180deg)}
+.subject-body{display:none;padding:8px 0}
+.subject-body.open{display:block}
+.subject-pbar{height:4px;background:var(--bg);border-radius:2px;margin:0 4px 10px;overflow:hidden}
+.subject-pfill{height:100%;border-radius:2px;transition:width .4s}
+.topic-row{background:var(--surface);border-radius:10px;padding:12px 14px;margin-bottom:6px;box-shadow:var(--shadow)}
+.topic-top{display:flex;align-items:center;gap:10px}
+.topic-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:13px;transition:.2s}
+.topic-check:active{transform:scale(.9)}
+.topic-check.checked{background:var(--green);border-color:var(--green);color:#fff}
+.topic-name{font-size:13px;font-weight:500;flex:1;color:var(--text)}
+.topic-detail{font-size:11px;color:var(--text2);margin-top:4px;padding-left:32px}
+.confidence-row{display:flex;gap:5px;margin-top:8px;padding-left:32px}
+.conf-btn{width:30px;height:30px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+.conf-btn:active{transform:scale(.9)}
+.conf-btn.c1{background:#ffe5e5;color:#ff3b30}.conf-btn.c2{background:#fff3e0;color:#ff9500}.conf-btn.c3{background:#fff9e0;color:#a68a00}.conf-btn.c4{background:#e5f9ed;color:#248a3d}.conf-btn.c5{background:#d1f5dc;color:#1b7d32}
+.conf-btn.selected.c1{background:#ff3b30;color:#fff}.conf-btn.selected.c2{background:#ff9500;color:#fff}.conf-btn.selected.c3{background:#ffcc00;color:#1d1d1f}.conf-btn.selected.c4{background:#34c759;color:#fff}.conf-btn.selected.c5{background:#248a3d;color:#fff}
+.conf-btn.selected{transform:scale(1.15);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+
+/* Weak areas */
+.weak-card{background:var(--surface);border-radius:var(--radius);padding:14px;margin-bottom:8px;border-left:4px solid var(--orange);box-shadow:var(--shadow)}
+.weak-card h4{font-size:13px;margin-bottom:3px;font-weight:600;color:var(--text)}
+.weak-card .wsubj{font-size:11px;color:var(--accent);margin-bottom:4px}
+.weak-card .wreason{font-size:11px;color:var(--text2);margin-bottom:5px;font-style:italic}
+.weak-card .waction{font-size:12px;margin-bottom:8px;color:var(--text);line-height:1.4}
+.weak-card .wbottom{display:flex;align-items:center;gap:10px}
+.weak-done{display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;font-weight:500;color:var(--text2)}
+.weak-done .wcheck{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;transition:.2s}
+.weak-done .wcheck.checked{background:var(--green);border-color:var(--green);color:#fff}
+.weak-conf{display:flex;gap:4px}
+.weak-conf .wc{width:24px;height:24px;border-radius:6px;border:none;font-size:10px;font-weight:700;cursor:pointer;transition:.15s}
+.weak-conf .wc.c1{background:#ffe5e5;color:#ff3b30}.weak-conf .wc.c2{background:#fff3e0;color:#ff9500}.weak-conf .wc.c3{background:#fff9e0;color:#a68a00}.weak-conf .wc.c4{background:#e5f9ed;color:#248a3d}.weak-conf .wc.c5{background:#d1f5dc;color:#1b7d32}
+.weak-conf .wc.selected.c1{background:#ff3b30;color:#fff}.weak-conf .wc.selected.c2{background:#ff9500;color:#fff}.weak-conf .wc.selected.c3{background:#ffcc00;color:#1d1d1f}.weak-conf .wc.selected.c4{background:#34c759;color:#fff}.weak-conf .wc.selected.c5{background:#248a3d;color:#fff}
+.weak-conf .wc.selected{transform:scale(1.1);box-shadow:0 2px 6px rgba(0,0,0,.12)}
+
+/* Tips */
+.tip-card{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.tip-card h3{font-size:14px;margin-bottom:2px;font-weight:600}
+.tip-card .texam{font-size:11px;color:var(--accent);margin-bottom:10px;font-weight:500}
+.tip-card ul{font-size:12px;padding-left:18px;margin-bottom:10px}
+.tip-card ul li{margin-bottom:5px;color:var(--text2);line-height:1.4}
+.tip-links{display:flex;gap:8px;flex-wrap:wrap}
+.tip-links a{background:var(--accent);color:#fff;text-decoration:none;padding:7px 14px;border-radius:20px;font-size:11px;font-weight:600;transition:opacity .2s}
+.tip-links a:hover{opacity:.85}
+
+/* Universal resources */
+.res-card{background:var(--surface);border-radius:var(--radius);padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}
+.res-card .rname{font-size:13px;font-weight:600;color:var(--text)}
+.res-card .rdesc{font-size:11px;color:var(--text2)}
+.res-card a{background:var(--accent);color:#fff;text-decoration:none;padding:7px 14px;border-radius:20px;font-size:11px;font-weight:600}
+
+/* Utilities */
+.section-title{font-size:15px;font-weight:700;margin:20px 0 10px;letter-spacing:-.2px}
+.empty-state{text-align:center;padding:30px;color:var(--text2);font-size:13px}
+.backup-btns{display:flex;gap:8px;margin:16px 0}
+.backup-btns button{flex:1;padding:12px;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.backup-btns button:active{opacity:.7}
+.btn-export{background:var(--accent);color:#fff}
+.btn-import{background:var(--bg);color:var(--text);border:1px solid var(--border) !important}
+.btn-reset{background:var(--red);color:#fff;margin-top:8px;width:100%;padding:12px;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>Carter's GCSE Revision</h1>
+    <p>WJEC Exams &middot; May&ndash;Jun 2026 &middot; Bishop of Llandaff</p>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="tab active" id="tab-dashboard">
+    <div class="section-title">Exam Countdown</div>
+    <div id="exam-cards"></div>
+    <div class="section-title">Today's Sessions</div>
+    <div id="today-sessions"></div>
+    <div class="section-title">Overall Progress</div>
+    <div id="dash-progress" class="progress-overview"></div>
+  </div>
+
+  <!-- TIMETABLE -->
+  <div class="tab" id="tab-timetable">
+    <div class="section-title">Revision Timetable</div>
+    <div id="timetable-content"></div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="tab" id="tab-progress">
+    <div class="section-title">Progress Tracker</div>
+    <div id="progress-content"></div>
+  </div>
+
+  <!-- WEAK AREAS -->
+  <div class="tab" id="tab-weak">
+    <div class="section-title">Weaker Areas</div>
+    <div id="weak-content"></div>
+  </div>
+
+  <!-- TIPS & RESOURCES -->
+  <div class="tab" id="tab-tips">
+    <div class="section-title">Exam Tips & Resources</div>
+    <div id="tips-content"></div>
+    <div class="section-title">Universal Resources</div>
+    <div id="universal-res"></div>
+    <div class="section-title">Data</div>
+    <div class="backup-btns">
+      <button class="btn-export" onclick="exportData()">Export Progress</button>
+      <button class="btn-import" onclick="importData()">Import Progress</button>
+    </div>
+    <button class="btn-reset" onclick="resetData()">Reset All Progress</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <button class="active" data-tab="dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </button>
+  <button data-tab="timetable">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Timetable
+  </button>
+  <button data-tab="progress">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Progress
+  </button>
+  <button data-tab="weak">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Weak Areas
+  </button>
+  <button data-tab="tips">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>
+    Tips
+  </button>
+</nav>
+
+<input type="file" id="import-file" accept=".json" style="display:none">
+
+<script>
+// ===== DATA =====
+const EXAMS = [
+  {date:"2026-05-12",day:"Tuesday",subject:"Maths & Numeracy Unit 1",desc:"Calculator paper - non-calc topics also assessed",code:"3320UA0-1",duration:"1h 45m",seat:"L7"},
+  {date:"2026-05-15",day:"Friday",subject:"English Lang & Lit Unit 1",desc:"Reading + writing - language analysis & creative writing",code:"3750U10-1",duration:"1h 30m",seat:"G2"},
+  {date:"2026-05-20",day:"Wednesday",subject:"Religious Studies Unit 1 (Islam)",desc:"Core beliefs, practices & philosophical themes from Islam",code:"3150UC0-1",duration:"1h 15m",seat:"G2"},
+  {date:"2026-06-04",day:"Thursday",subject:"Maths & Numeracy Unit 2",desc:"Non-calculator paper - algebra, geometry, trigonometry",code:"3320UB0-1",duration:"1h 45m",seat:"H14"},
+  {date:"2026-06-08",day:"Monday",subject:"Science Double Unit 1 (Biology 1)",desc:"Cells, respiration, digestion, circulation, plants, ecosystems",code:"3430UA0-1",duration:"1h 15m",seat:"D18"},
+  {date:"2026-06-12",day:"Friday",subject:"Science Double Unit 2 (Chemistry 1)",desc:"Atoms, bonding, acids, metals, rates of reaction, electrolysis",code:"3430UB0-1",duration:"1h 15m",seat:"E21"},
+  {date:"2026-06-15",day:"Monday",subject:"Science Double Unit 3 (Physics 1)",desc:"Forces, motion, energy, waves, electricity, magnetism",code:"3430UC0-1",duration:"1h 15m",seat:"E16"}
+];
+
+const SUBJECTS = ["Maths Unit 1","English Lang & Lit","Religious Studies (Islam)","Maths Unit 2","Science: Biology 1","Science: Chemistry 1","Science: Physics 1"];
+const SUBJECT_COLORS = {"Maths Unit 1":"#007aff","English Lang & Lit":"#af52de","Religious Studies (Islam)":"#ff9500","Maths Unit 2":"#5ac8fa","Science: Biology 1":"#34c759","Science: Chemistry 1":"#ff3b30","Science: Physics 1":"#5856d6"};
+
+const TOPICS = [
+  {s:"Maths Unit 1",n:1,t:"Number & place value",d:"Ordering, rounding, negatives, standard form"},
+  {s:"Maths Unit 1",n:2,t:"Fractions, decimals & percentages",d:"Conversions, operations, percentage change, reverse %"},
+  {s:"Maths Unit 1",n:3,t:"Ratio & proportion",d:"Simplifying, sharing, unitary method, scale"},
+  {s:"Maths Unit 1",n:4,t:"Financial maths (numeracy focus)",d:"Tax, VAT, wages, bills, bank statements, interest"},
+  {s:"Maths Unit 1",n:5,t:"Real-world problem solving",d:"Multi-step worded problems in everyday contexts"},
+  {s:"Maths Unit 1",n:6,t:"Basic algebra",d:"Substitution, simplifying expressions, solving linear equations"},
+  {s:"Maths Unit 1",n:7,t:"Graphs & straight lines",d:"Plotting, gradient, y=mx+c, real-world graph interpretation"},
+  {s:"Maths Unit 1",n:8,t:"Statistics - averages & range",d:"Mean, median, mode, range from tables/lists/grouped data"},
+  {s:"Maths Unit 1",n:9,t:"Probability basics",d:"Single events, sample space, simple combined events"},
+  {s:"Maths Unit 1",n:10,t:"Area & perimeter",d:"2D shapes including compound shapes"},
+  {s:"Maths Unit 1",n:11,t:"Volume & capacity",d:"Cuboids, prisms - in real-world contexts"},
+  {s:"Maths Unit 1",n:12,t:"Units & measurement",d:"Converting between units, time problems, speed-distance-time"},
+  {s:"English Lang & Lit",n:1,t:"Reading - finding & retrieving information",d:"Explicit details, selecting relevant quotes"},
+  {s:"English Lang & Lit",n:2,t:"Reading - language analysis",d:"Identifying techniques + explaining their EFFECT on the reader"},
+  {s:"English Lang & Lit",n:3,t:"Reading - structure analysis",d:"How writers organise texts (beginnings, endings, shifts, patterns)"},
+  {s:"English Lang & Lit",n:4,t:"Reading - comparing two texts",d:"Similarities/differences in language, structure, viewpoint"},
+  {s:"English Lang & Lit",n:5,t:"Creative writing - narrative",d:"Plot, character, setting, tension, narrative voice"},
+  {s:"English Lang & Lit",n:6,t:"Creative writing - descriptive",d:"Sensory language, imagery, atmosphere, varied sentence structures"},
+  {s:"English Lang & Lit",n:7,t:"Transactional writing - formal letter/email",d:"Purpose, audience, register, layout conventions"},
+  {s:"English Lang & Lit",n:8,t:"Transactional writing - speech/article/report",d:"Rhetorical devices, persuasive techniques, structure"},
+  {s:"English Lang & Lit",n:9,t:"Literary techniques vocabulary",d:"Metaphor, simile, personification, juxtaposition, sibilance, foreshadowing etc."},
+  {s:"English Lang & Lit",n:10,t:"Sentence structure variety",d:"Short sentences for effect, complex sentences, rhetorical questions"},
+  {s:"Religious Studies (Islam)",n:1,t:"The nature of God (Allah) - Tawhid",d:"Oneness, transcendence, immanence, omnipotence, benevolence"},
+  {s:"Religious Studies (Islam)",n:2,t:"The Six Articles of Faith (Sunni)",d:"Allah, Angels, Holy Books, Prophets, Day of Judgement, Al-Qadr"},
+  {s:"Religious Studies (Islam)",n:3,t:"Five Roots of Usul ad-Din (Shi'a)",d:"Tawhid, Adalat, Nubuwwah, Imamate, Mi'ad"},
+  {s:"Religious Studies (Islam)",n:4,t:"Prophethood (Risalah)",d:"Role of prophets, Muhammad as final prophet, Seal of the Prophets"},
+  {s:"Religious Studies (Islam)",n:5,t:"The Prophet Muhammad",d:"Early life in Makkah, Hijrah to Madinah, return to Makkah"},
+  {s:"Religious Studies (Islam)",n:6,t:"Angels (Malaikah)",d:"Jibril, Mika'il, Israfil - roles and beliefs"},
+  {s:"Religious Studies (Islam)",n:7,t:"Holy Books (Kutub)",d:"The Qur'an - revelation, importance, authority; other books"},
+  {s:"Religious Studies (Islam)",n:8,t:"Akhirah - life after death",d:"Judgement Day, heaven (Jannah), hell (Jahannam), Al-Qadr"},
+  {s:"Religious Studies (Islam)",n:9,t:"The Five Pillars of Islam (Sunni)",d:"Shahadah, Salah, Zakah, Sawm, Hajj - meaning and importance"},
+  {s:"Religious Studies (Islam)",n:10,t:"Ten Obligatory Acts (Shi'a)",d:"Prayer, fasting, khums, Hajj, Jihad and others"},
+  {s:"Religious Studies (Islam)",n:11,t:"Jihad - greater and lesser",d:"Inner struggle vs. holy war - conditions for lesser Jihad"},
+  {s:"Religious Studies (Islam)",n:12,t:"Philosophical theme - existence of God",d:"Cosmological argument, teleological argument, problem of evil"},
+  {s:"Religious Studies (Islam)",n:13,t:"Philosophical theme - evil & suffering",d:"Natural vs moral evil; Islamic responses; theodicy"},
+  {s:"Maths Unit 2",n:1,t:"Mental arithmetic & estimation",d:"Non-calc strategies, rounding to 1 s.f., checking answers"},
+  {s:"Maths Unit 2",n:2,t:"Algebra - quadratic equations",d:"Factorising (inc. difference of two squares), quadratic formula"},
+  {s:"Maths Unit 2",n:3,t:"Algebra - simultaneous equations",d:"Elimination and substitution methods"},
+  {s:"Maths Unit 2",n:4,t:"Algebra - inequalities",d:"Solving and representing on a number line"},
+  {s:"Maths Unit 2",n:5,t:"Algebra - sequences",d:"nth term formula, arithmetic and geometric sequences"},
+  {s:"Maths Unit 2",n:6,t:"Geometry - angles",d:"Parallel lines, polygons, circle theorems (Higher)"},
+  {s:"Maths Unit 2",n:7,t:"Geometry - transformations",d:"Reflection, rotation, translation, enlargement (inc. fractional/negative scale factor)"},
+  {s:"Maths Unit 2",n:8,t:"Geometry - loci & constructions",d:"Compass constructions, perpendicular bisector, angle bisector"},
+  {s:"Maths Unit 2",n:9,t:"Trigonometry (non-calculator)",d:"Exact values: sin/cos/tan of 0, 30, 45, 60, 90 degrees"},
+  {s:"Maths Unit 2",n:10,t:"Pythagoras theorem",d:"Finding missing sides in 2D and 3D"},
+  {s:"Maths Unit 2",n:11,t:"Surds & exact values",d:"Simplifying surds, rationalising the denominator (Higher)"},
+  {s:"Maths Unit 2",n:12,t:"Statistics - cumulative frequency / box plots",d:"Drawing and interpreting, inter-quartile range"},
+  {s:"Science: Biology 1",n:1,t:"Cell structure",d:"Animal & plant cells - organelles and their functions; specialised cells"},
+  {s:"Science: Biology 1",n:2,t:"Cell membranes - diffusion",d:"Passive process; concentration gradient; Visking tubing model"},
+  {s:"Science: Biology 1",n:3,t:"Osmosis",d:"Diffusion of water; selectively permeable membrane"},
+  {s:"Science: Biology 1",n:4,t:"Active transport",d:"Against concentration gradient; requires energy (ATP)"},
+  {s:"Science: Biology 1",n:5,t:"Enzymes",d:"Protein structure; active site; lock and key model; temperature & pH; denaturation"},
+  {s:"Science: Biology 1",n:6,t:"Respiration - aerobic",d:"Glucose + oxygen -> CO2 + water + energy; mitochondria"},
+  {s:"Science: Biology 1",n:7,t:"Respiration - anaerobic",d:"Glucose -> lactic acid (animals) / ethanol + CO2 (yeast); oxygen debt"},
+  {s:"Science: Biology 1",n:8,t:"Respiratory system",d:"Lungs, alveoli, bronchi, trachea; gas exchange; smoking effects"},
+  {s:"Science: Biology 1",n:9,t:"Digestion & digestive system",d:"Enzymes: amylase, protease, lipase; mouth, stomach, small intestine, liver"},
+  {s:"Science: Biology 1",n:10,t:"Circulatory system",d:"Double circulation; heart structure; arteries, veins, capillaries; blood"},
+  {s:"Science: Biology 1",n:11,t:"Plants & photosynthesis",d:"Chlorophyll; word & symbol equation; leaf adaptations; rate factors"},
+  {s:"Science: Biology 1",n:12,t:"Ecosystems & food chains",d:"Producers, consumers, decomposers; energy loss; human impact"},
+  {s:"Science: Chemistry 1",n:1,t:"Atomic structure",d:"Protons, neutrons, electrons; atomic number, mass number; isotopes"},
+  {s:"Science: Chemistry 1",n:2,t:"The periodic table",d:"Groups and periods; properties of Group 1, Group 7, Group 0"},
+  {s:"Science: Chemistry 1",n:3,t:"Compounds, mixtures & separation",d:"Pure substances vs mixtures; filtration, distillation, chromatography"},
+  {s:"Science: Chemistry 1",n:4,t:"Ionic bonding",d:"Transfer of electrons; formation of ions; properties of ionic compounds"},
+  {s:"Science: Chemistry 1",n:5,t:"Covalent bonding",d:"Sharing electrons; properties of simple molecular & giant covalent"},
+  {s:"Science: Chemistry 1",n:6,t:"Metallic bonding",d:"Delocalised electrons; properties explained"},
+  {s:"Science: Chemistry 1",n:7,t:"Moles & calculations (Higher)",d:"Avogadro's number; molar mass; percentage composition; reacting masses"},
+  {s:"Science: Chemistry 1",n:8,t:"Acids, bases & neutralisation",d:"pH scale; reactions with metals, carbonates; making salts"},
+  {s:"Science: Chemistry 1",n:9,t:"Rates of reaction",d:"Factors: temperature, concentration, surface area, catalysts; collision theory"},
+  {s:"Science: Chemistry 1",n:10,t:"Electrolysis",d:"Decomposition using electricity; electrode products; industrial uses"},
+  {s:"Science: Chemistry 1",n:11,t:"Metals - reactivity & extraction",d:"Reactivity series; displacement; extraction by reduction or electrolysis"},
+  {s:"Science: Chemistry 1",n:12,t:"Balancing equations",d:"Symbol equations; state symbols (s), (l), (g), (aq); conservation of mass"},
+  {s:"Science: Physics 1",n:1,t:"Distance, speed & acceleration",d:"v=d/t; a=(v-u)/t; distance-time graphs; velocity-time graphs"},
+  {s:"Science: Physics 1",n:2,t:"Newton's laws of motion",d:"1st: inertia; 2nd: F=ma; 3rd: equal & opposite forces"},
+  {s:"Science: Physics 1",n:3,t:"Forces - weight, friction & resultant",d:"W=mg; friction; terminal velocity; free body diagrams"},
+  {s:"Science: Physics 1",n:4,t:"Momentum & collisions (Higher)",d:"p=mv; conservation of momentum; impulse"},
+  {s:"Science: Physics 1",n:5,t:"Energy stores & transfers",d:"Kinetic, gravitational, elastic, chemical, thermal; conservation"},
+  {s:"Science: Physics 1",n:6,t:"Work done & power",d:"W=Fd; P=W/t; P=Fv - calculations in context"},
+  {s:"Science: Physics 1",n:7,t:"Waves - properties",d:"Amplitude, wavelength, frequency, wave speed: v=f\u03bb"},
+  {s:"Science: Physics 1",n:8,t:"Light - reflection & refraction",d:"Law of reflection; refraction at boundaries; total internal reflection"},
+  {s:"Science: Physics 1",n:9,t:"Sound waves",d:"Longitudinal waves; compressions; speed in different media"},
+  {s:"Science: Physics 1",n:10,t:"Electricity - circuits",d:"V=IR (Ohm's law); series and parallel circuits; resistance; power P=IV"},
+  {s:"Science: Physics 1",n:11,t:"Electricity - mains & safety",d:"AC vs DC; live, neutral, earth wires; fuses; earthing"},
+  {s:"Science: Physics 1",n:12,t:"Magnetism & electromagnetism",d:"Magnetic fields; electromagnets; motor effect; F=BIl (Higher)"}
+];
+
+const TIMETABLE = [
+  {week:"13 Apr",weekStart:"2026-04-13",nextExam:"Maths Unit 1 on 12 May (29 days)",sessions:[
+    {day:"Mon",slot:1,s:"Maths Unit 1",t:"Number & place value"},{day:"Mon",slot:2,s:"English Lang & Lit",t:"Reading - language analysis"},
+    {day:"Tue",slot:1,s:"English Lang & Lit",t:"Reading - language analysis"},{day:"Tue",slot:2,s:"Religious Studies (Islam)",t:"Five Roots of Usul ad-Din (Shi'a)"},
+    {day:"Wed",slot:1,s:"Maths Unit 1",t:"Ratio & proportion"},{day:"Wed",slot:2,s:"Maths Unit 1",t:"Financial maths (numeracy focus)"},
+    {day:"Thu",slot:1,s:"Religious Studies (Islam)",t:"Prophethood (Risalah)"},{day:"Thu",slot:2,s:"English Lang & Lit",t:"Creative writing - narrative"},
+    {day:"Fri",slot:1,s:"Maths Unit 1",t:"Real-world problem solving"},{day:"Fri",slot:2,s:"Religious Studies (Islam)",t:"Angels (Malaikah)"},
+    {day:"Sat",slot:1,s:"Maths Unit 2",t:"Geometry - angles"},{day:"Sat",slot:2,s:"Maths Unit 1",t:"Graphs & straight lines"},
+    {day:"Sun",slot:1,s:"English Lang & Lit",t:"Transactional writing - formal letter/email"},{day:"Sun",slot:2,s:"Maths Unit 2",t:"Geometry - loci & constructions"}
+  ]},
+  {week:"20 Apr",weekStart:"2026-04-20",nextExam:"Maths Unit 1 on 12 May (22 days)",sessions:[
+    {day:"Mon",slot:1,s:"Maths Unit 1",t:"Fractions, decimals & percentages"},{day:"Mon",slot:2,s:"English Lang & Lit",t:"Reading - structure analysis"},
+    {day:"Tue",slot:1,s:"English Lang & Lit",t:"Reading - structure analysis"},{day:"Tue",slot:2,s:"Religious Studies (Islam)",t:"Prophethood (Risalah)"},
+    {day:"Wed",slot:1,s:"Maths Unit 1",t:"Financial maths (numeracy focus)"},{day:"Wed",slot:2,s:"Maths Unit 1",t:"Real-world problem solving"},
+    {day:"Thu",slot:1,s:"Religious Studies (Islam)",t:"The Prophet Muhammad"},{day:"Thu",slot:2,s:"English Lang & Lit",t:"Creative writing - descriptive"},
+    {day:"Fri",slot:1,s:"Maths Unit 1",t:"Basic algebra"},{day:"Fri",slot:2,s:"Religious Studies (Islam)",t:"Holy Books (Kutub)"},
+    {day:"Sat",slot:1,s:"Maths Unit 2",t:"Geometry - transformations"},{day:"Sat",slot:2,s:"Maths Unit 1",t:"Statistics - averages & range"},
+    {day:"Sun",slot:1,s:"English Lang & Lit",t:"Transactional writing - speech/article/report"},{day:"Sun",slot:2,s:"Maths Unit 2",t:"Trigonometry (non-calculator)"}
+  ]},
+  {week:"27 Apr",weekStart:"2026-04-27",nextExam:"Maths Unit 1 on 12 May (15 days)",sessions:[
+    {day:"Mon",slot:1,s:"Maths Unit 1",t:"Ratio & proportion"},{day:"Mon",slot:2,s:"English Lang & Lit",t:"Reading - comparing two texts"},
+    {day:"Tue",slot:1,s:"English Lang & Lit",t:"Reading - comparing two texts"},{day:"Tue",slot:2,s:"Religious Studies (Islam)",t:"The Prophet Muhammad"},
+    {day:"Wed",slot:1,s:"Maths Unit 1",t:"Real-world problem solving"},{day:"Wed",slot:2,s:"Maths Unit 1",t:"Basic algebra"},
+    {day:"Thu",slot:1,s:"Religious Studies (Islam)",t:"Angels (Malaikah)"},{day:"Thu",slot:2,s:"English Lang & Lit",t:"Transactional writing - formal letter/email"},
+    {day:"Fri",slot:1,s:"Maths Unit 1",t:"Graphs & straight lines"},{day:"Fri",slot:2,s:"Religious Studies (Islam)",t:"Akhirah - life after death"},
+    {day:"Sat",slot:1,s:"Maths Unit 2",t:"Geometry - loci & constructions"},{day:"Sat",slot:2,s:"Maths Unit 1",t:"Probability basics"},
+    {day:"Sun",slot:1,s:"English Lang & Lit",t:"Literary techniques vocabulary"},{day:"Sun",slot:2,s:"Maths Unit 2",t:"Pythagoras theorem"}
+  ]},
+  {week:"04 May",weekStart:"2026-05-04",nextExam:"Maths Unit 1 on 12 May (8 days)",sessions:[
+    {day:"Mon",slot:1,s:"Maths Unit 1",t:"Financial maths (numeracy focus)"},{day:"Mon",slot:2,s:"English Lang & Lit",t:"Creative writing - narrative"},
+    {day:"Tue",slot:1,s:"English Lang & Lit",t:"Creative writing - narrative"},{day:"Tue",slot:2,s:"Religious Studies (Islam)",t:"Angels (Malaikah)"},
+    {day:"Wed",slot:1,s:"Maths Unit 1",t:"Basic algebra"},{day:"Wed",slot:2,s:"Maths Unit 1",t:"Graphs & straight lines"},
+    {day:"Thu",slot:1,s:"Religious Studies (Islam)",t:"Holy Books (Kutub)"},{day:"Thu",slot:2,s:"English Lang & Lit",t:"Transactional writing - speech/article/report"},
+    {day:"Fri",slot:1,s:"Maths Unit 1",t:"Statistics - averages & range"},{day:"Fri",slot:2,s:"Religious Studies (Islam)",t:"The Five Pillars of Islam (Sunni)"},
+    {day:"Sat",slot:1,s:"Maths Unit 2",t:"Trigonometry (non-calculator)"},{day:"Sat",slot:2,s:"Maths Unit 1",t:"Area & perimeter"},
+    {day:"Sun",slot:1,s:"English Lang & Lit",t:"Sentence structure variety"},{day:"Sun",slot:2,s:"Maths Unit 2",t:"Surds & exact values"}
+  ]},
+  {week:"11 May",weekStart:"2026-05-11",nextExam:"Maths Unit 1 on 12 May (1 day)",sessions:[
+    {day:"Mon",slot:1,s:"Maths Unit 1",t:"Real-world problem solving"},{day:"Mon",slot:2,s:"English Lang & Lit",t:"Creative writing - descriptive"},
+    {day:"Tue",slot:1,s:"English Lang & Lit",t:"Creative writing - descriptive"},{day:"Tue",slot:2,s:"Religious Studies (Islam)",t:"Holy Books (Kutub)"},
+    {day:"Wed",slot:1,s:"Maths Unit 1",t:"Graphs & straight lines"},{day:"Wed",slot:2,s:"Maths Unit 1",t:"Statistics - averages & range"},
+    {day:"Thu",slot:1,s:"Religious Studies (Islam)",t:"Akhirah - life after death"},{day:"Thu",slot:2,s:"English Lang & Lit",t:"Literary techniques vocabulary"},
+    {day:"Fri",slot:1,s:"Maths Unit 1",t:"Probability basics"},{day:"Fri",slot:2,s:"Religious Studies (Islam)",t:"Ten Obligatory Acts (Shi'a)"},
+    {day:"Sat",slot:1,s:"Maths Unit 2",t:"Pythagoras theorem"},{day:"Sat",slot:2,s:"Maths Unit 1",t:"Volume & capacity"},
+    {day:"Sun",slot:1,s:"English Lang & Lit",t:"Reading - finding & retrieving information"},{day:"Sun",slot:2,s:"Maths Unit 2",t:"Statistics - cumulative frequency / box plots"}
+  ]},
+  {week:"18 May",weekStart:"2026-05-18",nextExam:"Religious Studies Unit 1 (Islam) on 20 May (2 days)",sessions:[
+    {day:"Mon",slot:1,s:"Religious Studies (Islam)",t:"Angels (Malaikah)"},{day:"Mon",slot:2,s:"Maths Unit 2",t:"Geometry - transformations"},
+    {day:"Tue",slot:1,s:"Maths Unit 2",t:"Geometry - transformations"},{day:"Tue",slot:2,s:"Religious Studies (Islam)",t:"Akhirah - life after death"},
+    {day:"Wed",slot:1,s:"Religious Studies (Islam)",t:"Akhirah - life after death"},{day:"Wed",slot:2,s:"Maths Unit 2",t:"Trigonometry (non-calculator)"},
+    {day:"Thu",slot:1,s:"Maths Unit 2",t:"Trigonometry (non-calculator)"},{day:"Thu",slot:2,s:"Religious Studies (Islam)",t:"Ten Obligatory Acts (Shi'a)"},
+    {day:"Fri",slot:1,s:"Religious Studies (Islam)",t:"Ten Obligatory Acts (Shi'a)"},{day:"Fri",slot:2,s:"Maths Unit 2",t:"Surds & exact values"},
+    {day:"Sat",slot:1,s:"Religious Studies (Islam)",t:"Jihad - greater and lesser"},{day:"Sat",slot:2,s:"Maths Unit 2",t:"Statistics - cumulative frequency / box plots"},
+    {day:"Sun",slot:1,s:"Maths Unit 2",t:"Statistics - cumulative frequency / box plots"},{day:"Sun",slot:2,s:"Science: Biology 1",t:"Cell structure"}
+  ]},
+  {week:"25 May",weekStart:"2026-05-25",nextExam:"Maths Unit 2 on 04 Jun (10 days)",sessions:[
+    {day:"Mon",slot:1,s:"Maths Unit 2",t:"Geometry - transformations"},{day:"Mon",slot:2,s:"Science: Biology 1",t:"Respiratory system"},
+    {day:"Tue",slot:1,s:"Science: Biology 1",t:"Respiratory system"},{day:"Tue",slot:2,s:"Maths Unit 2",t:"Trigonometry (non-calculator)"},
+    {day:"Wed",slot:1,s:"Maths Unit 2",t:"Trigonometry (non-calculator)"},{day:"Wed",slot:2,s:"Science: Chemistry 1",t:"Electrolysis"},
+    {day:"Thu",slot:1,s:"Science: Chemistry 1",t:"Electrolysis"},{day:"Thu",slot:2,s:"Maths Unit 2",t:"Surds & exact values"},
+    {day:"Fri",slot:1,s:"Maths Unit 2",t:"Surds & exact values"},{day:"Fri",slot:2,s:"Science: Physics 1",t:"Magnetism & electromagnetism"},
+    {day:"Sat",slot:1,s:"Science: Biology 1",t:"Ecosystems & food chains"},{day:"Sat",slot:2,s:"Science: Chemistry 1",t:"Atomic structure"},
+    {day:"Sun",slot:1,s:"Science: Chemistry 1",t:"Atomic structure"},{day:"Sun",slot:2,s:"Maths Unit 2",t:"Algebra - quadratic equations"}
+  ]},
+  {week:"01 Jun",weekStart:"2026-06-01",nextExam:"Maths Unit 2 on 04 Jun (3 days)",sessions:[
+    {day:"Mon",slot:1,s:"Maths Unit 2",t:"Geometry - loci & constructions"},{day:"Mon",slot:2,s:"Science: Biology 1",t:"Digestion & digestive system"},
+    {day:"Tue",slot:1,s:"Science: Biology 1",t:"Digestion & digestive system"},{day:"Tue",slot:2,s:"Maths Unit 2",t:"Pythagoras theorem"},
+    {day:"Wed",slot:1,s:"Maths Unit 2",t:"Pythagoras theorem"},{day:"Wed",slot:2,s:"Science: Chemistry 1",t:"Metals - reactivity & extraction"},
+    {day:"Thu",slot:1,s:"Science: Chemistry 1",t:"Metals - reactivity & extraction"},{day:"Thu",slot:2,s:"Maths Unit 2",t:"Statistics - cumulative frequency / box plots"},
+    {day:"Fri",slot:1,s:"Maths Unit 2",t:"Statistics - cumulative frequency / box plots"},{day:"Fri",slot:2,s:"Science: Physics 1",t:"Distance, speed & acceleration"},
+    {day:"Sat",slot:1,s:"Science: Biology 1",t:"Cell structure"},{day:"Sat",slot:2,s:"Science: Chemistry 1",t:"The periodic table"},
+    {day:"Sun",slot:1,s:"Science: Chemistry 1",t:"The periodic table"},{day:"Sun",slot:2,s:"Maths Unit 2",t:"Algebra - simultaneous equations"}
+  ]},
+  {week:"08 Jun",weekStart:"2026-06-08",nextExam:"Biology 1 on 08 Jun / Chemistry 1 on 12 Jun / Physics 1 on 15 Jun",sessions:[
+    {day:"Mon",slot:1,s:"Science: Chemistry 1",t:"Rates of reaction"},{day:"Mon",slot:2,s:"Science: Physics 1",t:"Electricity - circuits"},
+    {day:"Tue",slot:1,s:"Science: Chemistry 1",t:"Electrolysis"},{day:"Tue",slot:2,s:"Science: Chemistry 1",t:"Metals - reactivity & extraction"},
+    {day:"Wed",slot:1,s:"Science: Physics 1",t:"Electricity - mains & safety"},{day:"Wed",slot:2,s:"Science: Chemistry 1",t:"Balancing equations"},
+    {day:"Thu",slot:1,s:"Science: Chemistry 1",t:"Balancing equations"},{day:"Thu",slot:2,s:"Science: Physics 1",t:"Distance, speed & acceleration"},
+    {day:"Fri",slot:1,s:"Science: Chemistry 1",t:"Atomic structure"},{day:"Fri",slot:2,s:"Science: Chemistry 1",t:"The periodic table"},
+    {day:"Sat",slot:1,s:"Science: Physics 1",t:"Newton's laws of motion"},{day:"Sat",slot:2,s:"Science: Chemistry 1",t:"Compounds, mixtures & separation"},
+    {day:"Sun",slot:1,s:"Science: Chemistry 1",t:"Compounds, mixtures & separation"},{day:"Sun",slot:2,s:"Science: Physics 1",t:"Momentum & collisions (Higher)"}
+  ]}
+];
+
+const WEAK_AREAS = [
+  {s:"Maths Unit 1",area:"Reverse percentages",reason:"Students work forward not backward - learn: original = amount \u00f7 multiplier",action:"Do 5 reverse % Qs every session"},
+  {s:"Maths Unit 1",area:"Bank statements / financial contexts",reason:"Unfamiliar format causes panic",action:"Practise reading debit/credit columns - treat as simple addition/subtraction"},
+  {s:"Maths Unit 1",area:"Multi-step worded problems",reason:"Students rush and misread the question",action:"Underline key info before calculating; show every step"},
+  {s:"Maths Unit 1",area:"Grouped frequency / estimated mean",reason:"Formula often applied incorrectly",action:"Midpoint x frequency, sum \u00f7 total frequency"},
+  {s:"Maths Unit 1",area:"Showing communication marks",reason:"Students write answer only",action:"Always write: formula \u2192 substitution \u2192 answer with units"},
+  {s:"English Lang & Lit",area:"Language analysis - explaining effect",reason:"Students identify technique but stop there - no explanation of effect",action:"'This creates a feeling of... because...' - practise this frame every time"},
+  {s:"English Lang & Lit",area:"Structure analysis",reason:"Students default to language analysis - misses the question",action:"Structure = how the text is organised. Think: where? what order? why?"},
+  {s:"English Lang & Lit",area:"Time management in the exam",reason:"Too long on reading, not enough for writing",action:"Strict timings: 45 min reading section, 45 min writing section"},
+  {s:"English Lang & Lit",area:"Vocabulary in creative writing",reason:"Students use basic, repetitive language",action:"Build a bank of 30 high-quality words/phrases - use 2-3 per piece"},
+  {s:"English Lang & Lit",area:"Transactional writing conventions",reason:"Wrong register or missing layout features",action:"Formal letter: address, date, Dear Sir/Madam, Yours faithfully"},
+  {s:"Religious Studies (Islam)",area:"Six Articles vs Five Roots",reason:"Students mix up Sunni and Shi'a belief structures",action:"Make a side-by-side comparison table - learn which belongs to which"},
+  {s:"Religious Studies (Islam)",area:"Extended writing (8-mark answers)",reason:"Students give one-sided answers",action:"Structure: intro \u2192 Islamic view + quote \u2192 counter view \u2192 conclusion"},
+  {s:"Religious Studies (Islam)",area:"Islamic quotes as evidence",reason:"Essays lack specific Qur'anic or hadith references",action:"Learn 3-4 key quotes: e.g. 'There is no god but Allah' (Surah 112)"},
+  {s:"Religious Studies (Islam)",area:"Philosophical arguments for God",reason:"Students describe arguments vaguely",action:"Cosmological: first cause. Teleological: design. Learn each in 2 sentences."},
+  {s:"Religious Studies (Islam)",area:"Problem of evil - Islamic response",reason:"Students only state the problem, not the Islamic answer",action:"Islam: suffering tests faith (Qur'an 2:155); Allah's wisdom beyond human understanding"},
+  {s:"Maths Unit 2",area:"Non-calculator quadratics",reason:"Students rely on calculator for factorising - can't in this paper",action:"Practise factorising ax\u00b2+bx+c by hand daily - spot patterns"},
+  {s:"Maths Unit 2",area:"Circle theorems",reason:"8 theorems to memorise - often confused",action:"Draw and label each theorem; do 10 circle theorem Qs"},
+  {s:"Maths Unit 2",area:"Exact trig values",reason:"Often forgotten under pressure",action:"Make a table: 0\u00b0,30\u00b0,45\u00b0,60\u00b0,90\u00b0 for sin/cos/tan - memorise"},
+  {s:"Maths Unit 2",area:"Simultaneous equations",reason:"Sign errors in elimination method",action:"Always label equations (1) and (2); be careful adding/subtracting"},
+  {s:"Maths Unit 2",area:"Surds",reason:"Rationalising and simplifying confuses students",action:"Practise: \u221aa x \u221aa = a, \u221a(ab) = \u221aa x \u221ab - 5 Qs per session"},
+  {s:"Science: Biology 1",area:"Osmosis direction",reason:"Students confuse high/low water concentration with solute concentration",action:"HIGH water concentration = LOW solute = hypotonic. Draw it out."},
+  {s:"Science: Biology 1",area:"Active transport vs diffusion",reason:"Students mix these up - key difference is energy use",action:"Active transport needs energy; diffusion is passive - this is the key fact"},
+  {s:"Science: Biology 1",area:"Enzyme denaturation",reason:"Students say enzymes are 'killed' - wrong word",action:"Use 'denatured' - the active site changes shape permanently"},
+  {s:"Science: Biology 1",area:"Aerobic vs anaerobic equations",reason:"Symbol equations often wrong or incomplete",action:"Memorise both fully: C6H12O6 + 6O2 \u2192 6CO2 + 6H2O (aerobic)"},
+  {s:"Science: Biology 1",area:"Photosynthesis limiting factors",reason:"Vague explanations of how factors limit the rate",action:"Explain in terms of rate: 'light intensity limits the rate because...'"},
+  {s:"Science: Chemistry 1",area:"Balancing chemical equations",reason:"Most common error - symbol changes instead of coefficients",action:"Do 5 balancing equations every revision day - never change formulae"},
+  {s:"Science: Chemistry 1",area:"Moles calculations (Higher)",reason:"Formula triangle forgotten or misapplied",action:"n = m/Mr - learn this; practise with worked examples"},
+  {s:"Science: Chemistry 1",area:"Electrolysis products",reason:"Students unsure which product forms at which electrode",action:"OIL RIG: Oxidation at anode (+), Reduction at cathode (-)"},
+  {s:"Science: Chemistry 1",area:"Ionic vs covalent properties",reason:"Students confuse high/low melting points",action:"Ionic = high mp; simple covalent = low mp; giant covalent = very high mp"},
+  {s:"Science: Chemistry 1",area:"Collision theory explanations",reason:"Students list factors without explaining WHY",action:"Always end with: '...so there are more frequent successful collisions'"},
+  {s:"Science: Physics 1",area:"Rearranging equations",reason:"Students substitute before rearranging - common error",action:"Write equation \u2192 rearrange \u2192 substitute \u2192 solve. Every time."},
+  {s:"Science: Physics 1",area:"Velocity-time graphs",reason:"Area under graph (= distance) is poorly calculated",action:"Area = triangle + rectangle; practise with different graph shapes"},
+  {s:"Science: Physics 1",area:"Series vs parallel rules",reason:"Students apply the wrong rule to the wrong circuit",action:"Series: same current, voltages add. Parallel: same voltage, currents add."},
+  {s:"Science: Physics 1",area:"Momentum (Higher)",reason:"Unit and direction often omitted",action:"Momentum in kg m/s; always specify direction for vector quantities"},
+  {s:"Science: Physics 1",area:"Wave equation",reason:"Frequency vs period confused",action:"f = 1/T; v = f\u03bb - practise with both Hz and period given"}
+];
+
+const EXAM_TIPS = [
+  {s:"Maths Unit 1",exam:"12 May 2026",tips:["Show ALL working - 2 marks per paper are specifically for mathematical communication","This is the calculator paper - use it! Double-check arithmetic on the calculator","Context questions: highlight the numbers and what the question is actually asking first","Numeracy focus means real-world settings - don't panic, the maths itself is straightforward"],flashcards:"https://quizlet.com/gb/content/wjec-gcse-maths-flashcards",papers:"https://www.savemyexams.com/gcse/maths/wjec/past-papers/"},
+  {s:"English Lang & Lit",exam:"15 May 2026",tips:["Always PEE: Point \u2192 Evidence (quote) \u2192 Explain the effect","Use subject terminology precisely - 'sibilance' beats 'lots of S sounds'","Plan creative writing for 5 minutes before starting - structure matters","Reading questions: re-read the relevant paragraph before answering"],flashcards:"https://quizlet.com/gb/subject/gcse-english-language/",papers:"https://www.wjec.co.uk/home/past-papers/"},
+  {s:"Religious Studies (Islam)",exam:"20 May 2026",tips:["For 8-mark essays: intro, TWO developed Islamic points with quotes, counter view, conclusion","Always use religious terminology: Tawhid, Akhirah, Risalah, Ummah etc.","Know both Sunni AND Shi'a perspectives - the exam can ask about either","Quotes: even paraphrased references to the Qur'an or hadith strengthen answers"],flashcards:"https://quizlet.com/gb/content/wjec-gcse-religious-studies-resources",papers:"https://www.savemyexams.com/gcse/religious-studies/wjec-eduqas/past-papers/"},
+  {s:"Maths Unit 2",exam:"04 Jun 2026",tips:["NO calculator - practise doing everything by hand in revision so it feels natural","Quadratic formula must be memorised: x = (-b \u00b1 \u221a(b\u00b2-4ac)) / 2a","Exact trig values: make a flashcard and test yourself daily","Show every step - even if the final answer is wrong, method marks are available"],flashcards:"https://quizlet.com/gb/content/wjec-gcse-maths-flashcards",papers:"https://mmerevise.co.uk/gcse-maths-revision/gcse-maths-past-papers/wjec-gcse-maths-past-papers/"},
+  {s:"Science: Biology 1",exam:"08 Jun 2026",tips:["Memorise both word AND symbol equations for photosynthesis and respiration","Know all specified practicals - method and evaluation questions appear every year","Draw and label diagrams wherever possible - examiners reward clear diagrams","Use BBC Bitesize WJEC Biology for spec-specific revision questions"],flashcards:"https://www.brainscape.com/subjects/gcse-wjec",papers:"https://revisionscience.com/gcse-revision/science/science-gcse-past-papers/wjec-gcse-science-past-papers"},
+  {s:"Science: Chemistry 1",exam:"12 Jun 2026",tips:["Balancing equations is worth LOTS of marks - practise every single day","Know state symbols - (s)(l)(g)(aq) - appear on every paper","Moles: n = m/Mr - this formula gets you through most calculation questions","Use BBC Bitesize WJEC Chemistry for spec-specific questions on each topic"],flashcards:"https://www.brainscape.com/subjects/gcse-wjec",papers:"https://revisionscience.com/gcse-revision/science/science-gcse-past-papers/wjec-gcse-science-past-papers"},
+  {s:"Science: Physics 1",exam:"15 Jun 2026",tips:["Equation sheet IS provided - but you still need to know how to use and rearrange each one","ALWAYS write equation, rearrange, substitute, solve with units - method marks throughout","Draw diagrams for circuit questions - it helps you apply the right rules","Past paper examiner reports show velocity-time graphs and equation rearrangement are commonly poor - practise these most"],flashcards:"https://quizlet.com/gb/subject/gcse-physics/",papers:"https://revisionscience.com/gcse-revision/science/science-gcse-past-papers/wjec-gcse-science-past-papers"}
+];
+
+const UNIVERSAL_RES = [
+  {name:"revise.wales",desc:"300+ WJEC past papers - every subject, all in one place",url:"https://revise.wales/"},
+  {name:"WJEC Question Bank",desc:"Build custom practice papers by topic from real past paper Qs",url:"https://questionbank.wjec.co.uk/students/past-papers/"},
+  {name:"BBC Bitesize WJEC",desc:"WJEC-specific notes, videos & quizzes - select your subject",url:"https://www.bbc.co.uk/bitesize/secondary"},
+  {name:"Medly",desc:"AI revision tutor - use daily for flashcards & explanations",url:"https://medly.ai"},
+  {name:"Save My Exams WJEC",desc:"Past papers + mark schemes organised by subject and year",url:"https://www.savemyexams.com/past-papers/wjec/"}
+];
+
+// ===== STATE =====
+const STORAGE_KEY = "carter-revision-v1";
+let state = loadState();
+
+function defaultState(){
+  return {topicDone:{},topicConf:{},sessionDone:{},weakDone:{},weakConf:{}};
+}
+function loadState(){
+  try{const d=localStorage.getItem(STORAGE_KEY);return d?{...defaultState(),...JSON.parse(d)}:defaultState();}catch(e){return defaultState();}
+}
+function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
+function topicKey(s,n){return s+"::"+n;}
+function sessionKey(wi,day,slot){return wi+"::"+day+"::"+slot;}
+function weakKey(s,area){return s+"::"+area;}
+
+// ===== HELPERS =====
+function daysUntil(dateStr){
+  const now=new Date();now.setHours(0,0,0,0);
+  const exam=new Date(dateStr);exam.setHours(0,0,0,0);
+  return Math.ceil((exam-now)/(86400000));
+}
+function todayDayName(){return["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];}
+function getCurrentWeekIndex(){
+  const now=new Date();now.setHours(0,0,0,0);
+  for(let i=TIMETABLE.length-1;i>=0;i--){
+    const ws=new Date(TIMETABLE[i].weekStart);ws.setHours(0,0,0,0);
+    if(now>=ws)return i;
+  }
+  return 0;
+}
+function getSubjectTopics(subj){return TOPICS.filter(t=>t.s===subj);}
+function getSubjectProgress(subj){
+  const topics=getSubjectTopics(subj);
+  if(!topics.length)return{done:0,total:0,pct:0};
+  const done=topics.filter(t=>state.topicDone[topicKey(t.s,t.n)]).length;
+  return{done,total:topics.length,pct:Math.round(done/topics.length*100)};
+}
+function confColor(c){return["","#ff1744","#ff6d00","#ffd600","#69f0ae","#00c853"][c]||"#555";}
+
+// ===== EVENT DELEGATION =====
+document.addEventListener("click",function(e){
+  const el=e.target.closest("[data-action]");
+  if(!el)return;
+  const action=el.dataset.action;
+  const wi=parseInt(el.dataset.wi)||0;
+  const day=el.dataset.day||"";
+  const slot=parseInt(el.dataset.slot)||0;
+  const ti=parseInt(el.dataset.ti);
+  const ci=parseInt(el.dataset.ci)||0;
+
+  if(action==="toggle-session"){
+    const sk=sessionKey(wi,day,slot);
+    state.sessionDone[sk]=!state.sessionDone[sk];
+    saveState();renderDashboard();
+  } else if(action==="toggle-week"){
+    document.getElementById("wh-"+wi).classList.toggle("open");
+    document.getElementById("wb-"+wi).classList.toggle("open");
+  } else if(action==="toggle-tt"){
+    const sk=sessionKey(wi,day,slot);
+    state.sessionDone[sk]=!state.sessionDone[sk];
+    saveState();renderTimetable();renderDashboard();
+  } else if(action==="toggle-subj"){
+    const sid=el.dataset.sid;
+    document.getElementById("sh-"+sid).classList.toggle("open");
+    document.getElementById("sb-"+sid).classList.toggle("open");
+  } else if(action==="toggle-topic"){
+    const tp=TOPICS[ti];
+    const tk=topicKey(tp.s,tp.n);
+    state.topicDone[tk]=!state.topicDone[tk];
+    saveState();renderProgress();renderDashboard();
+  } else if(action==="set-conf"){
+    const tp=TOPICS[ti];
+    const tk=topicKey(tp.s,tp.n);
+    state.topicConf[tk]=state.topicConf[tk]===ci?0:ci;
+    saveState();renderProgress();
+  } else if(action==="toggle-weak"){
+    const w=WEAK_AREAS[ti];
+    const wk=weakKey(w.s,w.area);
+    state.weakDone[wk]=!state.weakDone[wk];
+    saveState();renderWeak();
+  } else if(action==="set-weak-conf"){
+    const w=WEAK_AREAS[ti];
+    const wk=weakKey(w.s,w.area);
+    state.weakConf[wk]=state.weakConf[wk]===ci?0:ci;
+    saveState();renderWeak();
+  }
+});
+
+// ===== RENDER DASHBOARD =====
+function renderDashboard(){
+  let html="";
+  EXAMS.forEach(e=>{
+    const d=daysUntil(e.date);
+    const cls=d<=7?"urgent":d<=21?"soon":"planned";
+    html+=`<div class="exam-card ${cls}">
+      <h3>${e.subject}</h3>
+      <div class="meta"><span>${e.day} ${e.date.slice(5).replace("-"," ")}</span><span>${e.duration}</span><span>Seat ${e.seat}</span></div>
+      <div class="days"><div class="num">${d}</div><div class="label">days</div></div>
+    </div>`;
+  });
+  document.getElementById("exam-cards").innerHTML=html;
+
+  const dayName=todayDayName();
+  const wi=getCurrentWeekIndex();
+  const week=TIMETABLE[wi];
+  const todaySessions=week?week.sessions.filter(s=>s.day===dayName):[];
+  if(todaySessions.length){
+    let sh=`<div class="today-box"><h2>${dayName} &middot; Week of ${week.week}</h2>`;
+    todaySessions.forEach(s=>{
+      const sk=sessionKey(wi,s.day,s.slot);
+      const done=state.sessionDone[sk];
+      sh+=`<div class="session-item ${done?"done-session":""}" data-action="toggle-session" data-wi="${wi}" data-day="${s.day}" data-slot="${s.slot}">
+        <div class="info"><div class="subj" style="color:${SUBJECT_COLORS[s.s]||"#fff"}">${s.s}</div><div class="topic">${s.t}</div></div>
+        <div class="slot">Session ${s.slot}</div>
+      </div>`;
+    });
+    sh+=`</div>`;
+    document.getElementById("today-sessions").innerHTML=sh;
+  } else {
+    document.getElementById("today-sessions").innerHTML=`<div class="empty-state">No sessions scheduled for today</div>`;
+  }
+
+  let ph="";
+  SUBJECTS.forEach(subj=>{
+    const p=getSubjectProgress(subj);
+    const col=SUBJECT_COLORS[subj]||"#4fc3f7";
+    ph+=`<div class="prog-row">
+      <div class="plabel">${subj}</div>
+      <div class="pbar"><div class="pfill" style="width:${p.pct}%;background:${col}"></div></div>
+      <div class="ppct" style="color:${col}">${p.pct}%</div>
+    </div>`;
+  });
+  document.getElementById("dash-progress").innerHTML=ph;
+}
+
+// ===== RENDER TIMETABLE =====
+function renderTimetable(){
+  const cwi=getCurrentWeekIndex();
+  const days=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  let html="";
+  TIMETABLE.forEach((w,wi)=>{
+    const isCurrent=wi===cwi;
+    html+=`<div class="week-header ${isCurrent?"current-week":""}" data-action="toggle-week" data-wi="${wi}" id="wh-${wi}">
+      <h3>Week of ${w.week} &middot; ${w.nextExam}</h3>
+      <span class="arrow">\u25BC</span>
+    </div>
+    <div class="week-body" id="wb-${wi}">`;
+    days.forEach(day=>{
+      const daySessions=w.sessions.filter(s=>s.day===day);
+      if(!daySessions.length)return;
+      html+=`<div class="day-col"><h4>${day}</h4>`;
+      daySessions.forEach(s=>{
+        const sk=sessionKey(wi,s.day,s.slot);
+        const done=state.sessionDone[sk];
+        html+=`<div class="tt-session ${done?"completed":""}" data-action="toggle-tt" data-wi="${wi}" data-day="${s.day}" data-slot="${s.slot}">
+          <div class="check">${done?"\u2713":""}</div>
+          <div class="sinfo">
+            <div class="ssubj" style="color:${SUBJECT_COLORS[s.s]||"#fff"}">${s.s}</div>
+            <div class="stopic">${s.t}</div>
+          </div>
+          <div class="sslot">S${s.slot}</div>
+        </div>`;
+      });
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+  });
+  document.getElementById("timetable-content").innerHTML=html;
+  const wh=document.getElementById("wh-"+cwi);
+  const wb=document.getElementById("wb-"+cwi);
+  if(wh&&wb){wh.classList.add("open");wb.classList.add("open");}
+}
+
+// ===== RENDER PROGRESS =====
+function renderProgress(){
+  // Remember which subjects are currently expanded
+  const openSids=new Set();
+  document.querySelectorAll(".subject-header.open").forEach(el=>openSids.add(el.dataset.sid));
+
+  let html="";
+  SUBJECTS.forEach((subj,si)=>{
+    const topics=getSubjectTopics(subj);
+    const p=getSubjectProgress(subj);
+    const col=SUBJECT_COLORS[subj]||"#4fc3f7";
+    const sid=subj.replace(/[^a-zA-Z0-9]/g,"");
+    const isOpen=openSids.has(sid);
+    html+=`<div class="subject-section">
+      <div class="subject-header ${isOpen?"open":""}" data-action="toggle-subj" data-sid="${sid}" id="sh-${sid}">
+        <h3 style="color:${col}">${subj}</h3>
+        <span class="pct-badge" style="background:${col};color:#000">${p.done}/${p.total} &middot; ${p.pct}%</span>
+        <span class="arrow">\u25BC</span>
+      </div>
+      <div class="subject-body ${isOpen?"open":""}" id="sb-${sid}">
+        <div class="subject-pbar"><div class="subject-pfill" style="width:${p.pct}%;background:${col}"></div></div>`;
+    topics.forEach(tp=>{
+      const ti=TOPICS.indexOf(tp);
+      const tk=topicKey(tp.s,tp.n);
+      const done=state.topicDone[tk];
+      const conf=state.topicConf[tk]||0;
+      html+=`<div class="topic-row">
+        <div class="topic-top">
+          <div class="topic-check ${done?"checked":""}" data-action="toggle-topic" data-ti="${ti}">${done?"\u2713":""}</div>
+          <div class="topic-name">${tp.n}. ${tp.t}</div>
+        </div>
+        <div class="topic-detail">${tp.d}</div>
+        <div class="confidence-row">`;
+      for(let c=1;c<=5;c++){
+        html+=`<button class="conf-btn c${c} ${conf===c?"selected":""}" data-action="set-conf" data-ti="${ti}" data-ci="${c}">${c}</button>`;
+      }
+      html+=`</div></div>`;
+    });
+    html+=`</div></div>`;
+  });
+  document.getElementById("progress-content").innerHTML=html;
+}
+
+// ===== RENDER WEAK AREAS =====
+function renderWeak(){
+  let html="";
+  let currentSubj="";
+  WEAK_AREAS.forEach((w,i)=>{
+    if(w.s!==currentSubj){
+      currentSubj=w.s;
+      html+=`<div class="section-title" style="color:${SUBJECT_COLORS[w.s]||"#fff"};font-size:13px;margin-top:14px">${w.s}</div>`;
+    }
+    const wk=weakKey(w.s,w.area);
+    const done=state.weakDone[wk];
+    const conf=state.weakConf[wk]||0;
+    html+=`<div class="weak-card">
+      <h4>${w.area}</h4>
+      <div class="wreason">${w.reason}</div>
+      <div class="waction">${w.action}</div>
+      <div class="wbottom">
+        <div class="weak-done" data-action="toggle-weak" data-ti="${i}">
+          <div class="wcheck ${done?"checked":""}">${done?"\u2713":""}</div>
+          <span>Done</span>
+        </div>
+        <div class="weak-conf">`;
+    for(let c=1;c<=5;c++){
+      html+=`<button class="wc c${c} ${conf===c?"selected":""}" data-action="set-weak-conf" data-ti="${i}" data-ci="${c}">${c}</button>`;
+    }
+    html+=`</div></div></div>`;
+  });
+  document.getElementById("weak-content").innerHTML=html;
+}
+
+// ===== RENDER TIPS =====
+function renderTips(){
+  let html="";
+  EXAM_TIPS.forEach(et=>{
+    html+=`<div class="tip-card">
+      <h3 style="color:${SUBJECT_COLORS[et.s]||"#fff"}">${et.s}</h3>
+      <div class="texam">Exam: ${et.exam}</div>
+      <ul>${et.tips.map(t=>`<li>${t}</li>`).join("")}</ul>
+      <div class="tip-links">
+        <a href="${et.flashcards}" target="_blank" rel="noopener">Flashcards</a>
+        <a href="${et.papers}" target="_blank" rel="noopener">Past Papers</a>
+      </div>
+    </div>`;
+  });
+  document.getElementById("tips-content").innerHTML=html;
+
+  let rh="";
+  UNIVERSAL_RES.forEach(r=>{
+    rh+=`<div class="res-card">
+      <div><div class="rname">${r.name}</div><div class="rdesc">${r.desc}</div></div>
+      <a href="${r.url}" target="_blank" rel="noopener">Open</a>
+    </div>`;
+  });
+  document.getElementById("universal-res").innerHTML=rh;
+}
+
+// ===== BACKUP =====
+function exportData(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="revision-progress-backup.json";
+  a.click();
+}
+function importData(){document.getElementById("import-file").click();}
+document.getElementById("import-file").addEventListener("change",function(e){
+  const f=e.target.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{state={...defaultState(),...JSON.parse(ev.target.result)};saveState();renderAll();alert("Progress imported!");}
+    catch(err){alert("Invalid file");}
+  };
+  reader.readAsText(f);
+});
+function resetData(){
+  if(confirm("Reset ALL progress? This cannot be undone.")){
+    state=defaultState();saveState();renderAll();
+  }
+}
+
+// ===== NAV =====
+document.querySelectorAll("nav button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
+    window.scrollTo(0,0);
+  });
+});
+
+// ===== INIT =====
+function renderAll(){renderDashboard();renderTimetable();renderProgress();renderWeak();renderTips();}
+renderAll();
+</script>
+</body>
+</html>
